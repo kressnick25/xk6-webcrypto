@@ -23,6 +23,7 @@ type AlgorithmIdentifier = string
 
 const (
 	// RSASsaPkcs1v15 represents the RSA-SHA1 algorithm.
+	// TODO handle this specal case where not all upper, or conver to Upper
 	RSASsaPkcs1v15 = "RSASSA-PKCS1-v1_5"
 
 	// RSAPss represents the RSA-PSS algorithm.
@@ -149,9 +150,13 @@ func normalizeAlgorithm(rt *sobek.Runtime, v sobek.Value, op AlgorithmIdentifier
 	// A registered algorithm provided in lower case format, should
 	// be considered valid.
 	algorithm.Name = strings.ToUpper(algorithm.Name)
+	// Except for RSASSA-PKCS1-v1_5, which needs be mixed case for compatibility
+	if strings.EqualFold(algorithm.Name, RSASsaPkcs1v15) {
+		algorithm.Name = RSASsaPkcs1v15
+	}
 
 	if !isRegisteredAlgorithm(algorithm.Name, op) {
-		return Algorithm{}, NewError(NotSupportedError, "unsupported algorithm: "+algorithm.Name)
+		return Algorithm{}, NewError(NotSupportedError, "unsupported algorithm: "+algorithm.Name+" for operation: "+op)
 	}
 
 	return algorithm, nil
