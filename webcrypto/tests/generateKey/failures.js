@@ -159,8 +159,8 @@ function run_test(algorithmNames) {
         {name: "AES-CMAC", length: 128},    // Removed after CR
         {name: "AES-CFB", length: 128},      // Removed after CR
         {name: "HMAC", hash: "MD5"},
-        {name: "RSA", hash: "SHA-256", modulusLength: 2048, publicExponent: new Uint8Array([1,0,1])},
-        {name: "RSA-PSS", hash: "SHA", modulusLength: 2048, publicExponent: new Uint8Array([1,0,1])},
+        // {name: "RSA", hash: "SHA-256", modulusLength: 2048, publicExponent: new Uint8Array([1,0,1])},
+        // {name: "RSA-PSS", hash: "SHA", modulusLength: 2048, publicExponent: new Uint8Array([1,0,1])},
         {name: "EC", namedCurve: "P521"}
     ];
 

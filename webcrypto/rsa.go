@@ -15,10 +15,10 @@ type RsaKeyAlgorithm struct {
 	KeyAlgorithm
 
 	// ModulusLength contains the length, in bits, of the RSA modulus.
-	ModulusLength uint32 `json:"modulusLength"`
+	ModulusLength uint32 `js:"modulusLength"`
 
 	// PublicExponent contains the RSA public exponent value of the key to generate.
-	PublicExponent []byte `json:"publicExponent"`
+	PublicExponent []byte `js:"publicExponent"`
 }
 
 // RsaHashedKeyAlgorithm represents the [RSA algorithm for hashed keys].
@@ -28,7 +28,7 @@ type RsaHashedKeyAlgorithm struct {
 	RsaKeyAlgorithm
 
 	// Hash contains the hash algorithm that is used with this key.
-	Hash KeyAlgorithm `json:"hash"`
+	Hash KeyAlgorithm `js:"hash"`
 }
 
 // RsaKeyGenParams represents the [RSA key generation parameters].
@@ -38,10 +38,10 @@ type RsaKeyGenParams struct {
 	Algorithm
 
 	// ModulusLength contains the length, in bits, of the RSA modulus.
-	ModulusLength uint32 `json:"modulusLength"`
+	ModulusLength uint32 `js:"modulusLength"`
 
 	// PublicExponent contains the RSA public exponent value of the key to generate.
-	PublicExponent []byte `json:"publicExponent"`
+	PublicExponent []byte `js:"publicExponent"`
 }
 
 // RsaHashedKeyGenParams represents the RSA algorithm for hashed keys [key generation parameters].
@@ -51,7 +51,7 @@ type RsaHashedKeyGenParams struct {
 	RsaKeyGenParams
 
 	// Hash contains the hash algorithm to use.
-	Hash HashAlgorithmIdentifier `json:"hash"`
+	Hash HashAlgorithmIdentifier `js:"hash"`
 }
 
 // NewRsaHashedKeyGenParams creates a new RsaHashedKeyGenParams instance from a sobek.Value.
@@ -117,14 +117,17 @@ func (r RsaHashedKeyGenParams) validate() error {
 	return nil
 }
 
-// GenerateKeyPair implements the CryptoKeyPairGenerator interface for RsaHashedKeyGenParams, and generates
+// Ensure that HMACKeyGenParams implements the KeyGenerator interface.
+var _ KeyGenerator = &RsaHashedKeyGenParams{}
+
+// *GenerateKey implements the CryptoKeyPairGenerator interface for RsaHashedKeyGenParams, and generates
 // a new RSA key pair.
 //
 //nolint:funlen
-func (r RsaHashedKeyGenParams) GenerateKeyPair(
+func (r *RsaHashedKeyGenParams) GenerateKey(
 	extractable bool,
 	keyUsages []CryptoKeyUsage,
-) (*CryptoKeyPair, error) {
+) (CryptoKeyGenerationResult, error) {
 	var (
 		isSSAPKCS1v15 = strings.EqualFold(r.Name, RSASsaPkcs1v15)
 		isPSS         = strings.EqualFold(r.Name, RSAPss)

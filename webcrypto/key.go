@@ -188,6 +188,8 @@ func newKeyGenerator(rt *sobek.Runtime, normalized Algorithm, params sobek.Value
 		kg, err = newHMACKeyGenParams(rt, normalized, params)
 	case ECDH, ECDSA:
 		kg, err = newECKeyGenParams(rt, normalized, params)
+	case RSASsaPkcs1v15, RSAPss, RSAOaep:
+		kg, err = newRsaHashedKeyGenParams(rt, normalized, params)
 	default:
 		return nil, errors.New("key generation not implemented for algorithm " + normalized.Name)
 	}
