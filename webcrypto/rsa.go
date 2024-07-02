@@ -171,20 +171,42 @@ func (r *RsaHashedKeyGenParams) GenerateKey(
 	algorithm.PublicExponent = r.PublicExponent
 	algorithm.Hash = KeyAlgorithm{Algorithm{Name: r.Hash}}
 
-	// 9. 10. 11. 12. 13.
+	// 9. 10. 11. 12.
 	publicKey := CryptoKey{}
 	publicKey.Type = PublicCryptoKeyType
 	publicKey.Algorithm = algorithm
 	publicKey.Extractable = true
-	publicKey.Usages = keyUsages
+
+	// 13.
+	var publicKeyUsages []CryptoKeyUsage
+	switch r.Name {
+	case RSASsaPkcs1v15, RSAPss:
+		publicKeyUsages = []CryptoKeyUsage{VerifyCryptoKeyUsage}
+	case RSAOaep:
+		publicKeyUsages = []CryptoKeyUsage{EncryptCryptoKeyUsage, WrapKeyCryptoKeyUsage}
+	default:
+		return nil, NewError(ImplementationError, "unsupported algorithm name")
+	} 
+	publicKey.Usages = UsageIntersection(keyUsages, publicKeyUsages)
 	publicKey.handle = keyPair.Public()
 
-	// 14. 15. 16. 17. 18.
+	// 14. 15. 16. 17.
 	privateKey := CryptoKey{}
 	privateKey.Type = PrivateCryptoKeyType
 	privateKey.Algorithm = algorithm
 	privateKey.Extractable = extractable
-	privateKey.Usages = keyUsages
+
+	// 18.
+	var privateKeyUsages []CryptoKeyUsage
+	switch r.Name {
+	case RSASsaPkcs1v15, RSAPss:
+		privateKeyUsages = []CryptoKeyUsage{SignCryptoKeyUsage}
+	case RSAOaep:
+		privateKeyUsages = []CryptoKeyUsage{DecryptCryptoKeyUsage, UnwrapKeyCryptoKeyUsage}
+	default:
+		return nil, NewError(ImplementationError, "unsupported algorithm name")
+	} 
+	privateKey.Usages = UsageIntersection(keyUsages, privateKeyUsages)
 	privateKey.handle = *keyPair
 
 	// We apply the generateKey 8. step here, as we return a goja.Value
