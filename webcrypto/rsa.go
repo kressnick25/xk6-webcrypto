@@ -224,3 +224,65 @@ func (r *RsaHashedKeyGenParams) GenerateKey(
 	// 22.
 	return &result, nil
 }
+
+// Ensure that rsaSignerVerifier implements SignerVerifier interface
+var _ SignerVerifier = rsaSignerVerifier{}
+
+type rsaSignerVerifier struct{}
+
+// RSASSA-PKSCv1_5 Sign .
+func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
+	// 1.
+	if key.Type != PrivateCryptoKeyType {
+		return nil, NewError(InvalidAccessError, "key is not a valid RSASSA-PKCS1-v1_5 private key")
+	}
+
+	k, ok := key.handle.(rsa.PrivateKey)
+	if !ok {
+		return nil, NewError(InvalidAccessError, "key is not a valid RSASSA-PKCS1-v1_5 private key")
+	}	
+
+	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
+	if !ok {
+		return nil, NewError(NotSupportedError, "unsupported hash algorithm")
+	}
+
+	hash := alg.Hash.Name
+	hashFn, ok := getHashFn(hash)
+	if !ok {
+		return nil, NewError(NotSupportedError, "unsupported hash algorithm: "+hash)
+	}
+
+	cryptoHash, ok := getCryptoHash(hash)
+	if !ok {
+		return nil, NewError(NotSupportedError, "unsupported hash algorithm: "+hash)
+	}
+
+	hasher := hashFn()
+	hasher.Write(data)
+    
+	// 2.
+	var s []byte
+	var err error
+	switch key.Type {
+	case RSASsaPkcs1v15:
+		s, err = rsa.SignPKCS1v15(rand.Reader, &k, cryptoHash, hasher.Sum(nil))
+	case RSAPss, RSAOaep:
+		return nil, NewError(NotSupportedError, "WIP not implmented")
+	}
+	// 3. 
+	if err != nil {
+		return nil, NewError(OperationError, "unable to sign data:"+err.Error())
+	}
+
+	// 4.
+	signature := s
+
+	// 5.
+	return signature, nil
+}
+
+func (rsaSignerVerifier) Verify(key CryptoKey, signature, dataToVerify []byte) (bool, error) {
+	// TODO implement
+	return false, nil
+}

@@ -14,6 +14,8 @@ func newSignerVerifier(rt *sobek.Runtime, normalized Algorithm, params sobek.Val
 		return &hmacSignerVerifier{}, nil
 	case ECDSA:
 		return newECDSAParams(rt, normalized, params)
+	case RSASsaPkcs1v15, RSAPss, RSAOaep:
+		return &rsaSignerVerifier{}, nil
 	default:
 		return nil, NewError(NotSupportedError, "unsupported algorithm for signing/verifying: "+normalized.Name)
 	}

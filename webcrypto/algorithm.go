@@ -183,7 +183,7 @@ func isRegisteredAlgorithm(algorithmName string, forOperation string) bool {
 	case OperationIdentifierEncrypt, OperationIdentifierDecrypt:
 		return isAesAlgorithm(algorithmName)
 	case OperationIdentifierSign, OperationIdentifierVerify:
-		return algorithmName == HMAC || algorithmName == ECDSA
+		return algorithmName == HMAC || algorithmName == ECDSA || isRsaAlgorithm(algorithmName)
 	default:
 		return false
 	}
