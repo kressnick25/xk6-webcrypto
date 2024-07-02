@@ -166,6 +166,7 @@ func (r *RsaHashedKeyGenParams) GenerateKey(
 
 	// 4. 5. 6. 7. 8.
 	algorithm := RsaHashedKeyAlgorithm{}
+	algorithm.Algorithm.Name = r.Name
 	algorithm.ModulusLength = r.ModulusLength
 	algorithm.PublicExponent = r.PublicExponent
 	algorithm.Hash = KeyAlgorithm{Algorithm{Name: r.Hash}}
