@@ -128,8 +128,8 @@ type RSAHashedImportParams struct {
 // into `SubtleCrypto.Encrypt`, `SubtleCrypto.Decrypt`, `SubtleCrypto.WrapKey`, or
 // `SubtleCrypto.UnwrapKey`, when using the RSA_OAEP algorithm.
 type RSAOaepParams struct {
-	// Name should be set to "RSA-OAEP"
-	Name string
+	// Name should be set to AlgorithmKindRSAOaep
+	Name AlgorithmIdentifier
 
 	// Label holds (an ArrayBuffer, a TypedArray, or a DataView) an array of bytes that does not
 	// itself need to be encrypted but which should be bound to the ciphertext.
@@ -144,7 +144,7 @@ type RSAOaepParams struct {
 // parameter into `SubtleCrypto.Sign` or `SubtleCrypto.Verify`, when using the
 // RSA-PSS algorithm.
 type RSAPssParams struct {
-	// Name should be set to AlgorithmKindRsaPss.
+	// Name should be set to AlgorithmKindRSAPss.
 	Name AlgorithmIdentifier
 
 	// SaltLength holds (a Number) the length of the random salt to use, in bytes.
@@ -156,6 +156,6 @@ type RSAPssParams struct {
 
 // RSASsaPkcs1v15Params represents the object that should be passed as the algorithm
 type RSASsaPkcs1v15Params struct {
-	// Name should be set to AlgorithmKindRsassaPkcs1v15.
+	// Name should be set to AlgorithmKindRSASsaPkcs1v15.
 	Name AlgorithmIdentifier
 }

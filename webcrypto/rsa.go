@@ -234,12 +234,12 @@ type rsaSignerVerifier struct{}
 func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
 	// 1.
 	if key.Type != PrivateCryptoKeyType {
-		return nil, NewError(InvalidAccessError, "key is not a valid RSASSA-PKCS1-v1_5 private key")
+		return nil, NewError(InvalidAccessError, "key is not a valid "+RSASsaPkcs1v15+" private key")
 	}
 
 	k, ok := key.handle.(rsa.PrivateKey)
 	if !ok {
-		return nil, NewError(InvalidAccessError, "key is not a valid RSASSA-PKCS1-v1_5 private key")
+		return nil, NewError(InvalidAccessError, "key is not a valid "+RSASsaPkcs1v15+" private key")
 	}	
 
 	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
@@ -262,14 +262,8 @@ func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
 	hasher.Write(data)
     
 	// 2.
-	var s []byte
-	var err error
-	switch key.Type {
-	case RSASsaPkcs1v15:
-		s, err = rsa.SignPKCS1v15(rand.Reader, &k, cryptoHash, hasher.Sum(nil))
-	case RSAPss, RSAOaep:
-		return nil, NewError(NotSupportedError, "WIP not implmented")
-	}
+	s, err := rsa.SignPKCS1v15(rand.Reader, &k, cryptoHash, hasher.Sum(nil))
+	
 	// 3. 
 	if err != nil {
 		return nil, NewError(OperationError, "unable to sign data:"+err.Error())
@@ -283,6 +277,108 @@ func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
 }
 
 func (rsaSignerVerifier) Verify(key CryptoKey, signature, dataToVerify []byte) (bool, error) {
-	// TODO implement
-	return false, nil
+	// 1.
+	if key.Type != PublicCryptoKeyType {
+		return false, NewError(InvalidAccessError, "key is not a valid RSASSA-PCKS1v1_5 public key")
+	}
+
+	k, ok := key.handle.(*rsa.PublicKey)
+	if !ok {
+		return false, NewError(InvalidAccessError, "key is not a valid RSASSA-PCKS1v1_5 public key")
+	}
+
+	// 2. 
+	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
+	if !ok {
+		return false, NewError(NotSupportedError, "unsupported hash algorithm")
+	}
+
+	hash := alg.Hash.Name
+
+	hashFn, ok := getHashFn(hash)
+	if !ok {
+		return false, NewError(NotSupportedError, "unsupported hash algorithm: "+hash)
+	}
+
+	hasher := hashFn()
+	hasher.Write(dataToVerify)
+
+	cryptoHash, _ := getCryptoHash(hash)
+	verifyErr := rsa.VerifyPKCS1v15(k, cryptoHash, hasher.Sum(nil), signature)
+
+	// 3.
+	if verifyErr != nil {
+		// TODO: not sure what the 'name' of this error should be, and whether the error 'message' should just be the error from the verify function or just 'invalid signature' or maybe just nil?
+		return false, NewError(InvalidSignatureError, "invalid signature")
+	}
+
+	return true, nil
+}
+
+// Ensure that RSAPssParams implements SignerVerifier interface
+var _ SignerVerifier = &RSAPssParams{}
+
+func newRSAPssParams(rt *sobek.Runtime, normalized Algorithm, params sobek.Value) (*RSAPssParams, error) {
+	saltLength, err := traverseObject(rt, params, "saltValue")
+	if err != nil {
+		return nil, NewError(SyntaxError, "could not get hash from algorithm parameter")
+	}
+
+	return &RSAPssParams{
+		Name: normalized.Name,
+		SaltLength: int(saltLength.ToInteger()),
+	}, nil
+}
+
+func (rsaParams *RSAPssParams) Sign(key CryptoKey, data []byte) ([]byte, error) {
+	// 1.
+	if key.Type != PrivateCryptoKeyType {
+		return nil, NewError(InvalidAccessError, "key is not a valid"+RSAPss+"private key")
+	}
+
+	k, ok := key.handle.(rsa.PrivateKey)
+	if !ok {
+		return nil, NewError(InvalidAccessError, "key is not a valid "+RSAPss+" private key")
+	}	
+
+	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
+	if !ok {
+		return nil, NewError(NotSupportedError, "unsupported hash algorithm")
+	}
+
+	hash := alg.Hash.Name
+	hashFn, ok := getHashFn(hash)
+	if !ok {
+		return nil, NewError(NotSupportedError, "unsupported hash algorithm: "+hash)
+	}
+
+	hasher := hashFn()
+	hasher.Write(data)
+
+	cryptoHash, ok := getCryptoHash(hash)
+	if !ok {
+		return nil, NewError(NotSupportedError, "unsupported hash algorithm: "+hash)
+	}
+
+	// 2.
+	opts := rsa.PSSOptions{
+		SaltLength: rsaParams.SaltLength,
+		Hash: cryptoHash,
+	}
+	s, err := rsa.SignPSS(rand.Reader, &k, cryptoHash, hasher.Sum(nil), &opts)
+
+	// 3. 
+	if err != nil {
+		return nil, NewError(OperationError, "unable to sign data:"+err.Error())
+	}
+
+	// 4.
+	signature := s
+
+	// 5.
+	return signature, nil
+}
+
+func (rsaParams *RSAPssParams) Verify(key CryptoKey, signature, dataToVerify []byte) (bool, error) {
+	return false, NewError(OperationError, "Not implement")
 }
