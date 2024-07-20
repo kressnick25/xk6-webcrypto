@@ -55,7 +55,6 @@ type RsaHashedKeyGenParams struct {
 }
 
 // NewRsaHashedKeyGenParams creates a new RsaHashedKeyGenParams instance from a sobek.Value.
-//
 func newRsaHashedKeyGenParams(rt *sobek.Runtime, normalized Algorithm, v sobek.Value) (*RsaHashedKeyGenParams, error) {
 	if v == nil {
 		return &RsaHashedKeyGenParams{}, NewError(SyntaxError, "algorithm is required")
@@ -186,7 +185,7 @@ func (r *RsaHashedKeyGenParams) GenerateKey(
 		publicKeyUsages = []CryptoKeyUsage{EncryptCryptoKeyUsage, WrapKeyCryptoKeyUsage}
 	default:
 		return nil, NewError(ImplementationError, "unsupported algorithm name")
-	} 
+	}
 	publicKey.Usages = UsageIntersection(keyUsages, publicKeyUsages)
 	publicKey.handle = keyPair.Public()
 
@@ -205,7 +204,7 @@ func (r *RsaHashedKeyGenParams) GenerateKey(
 		privateKeyUsages = []CryptoKeyUsage{DecryptCryptoKeyUsage, UnwrapKeyCryptoKeyUsage}
 	default:
 		return nil, NewError(ImplementationError, "unsupported algorithm name")
-	} 
+	}
 	privateKey.Usages = UsageIntersection(keyUsages, privateKeyUsages)
 	privateKey.handle = *keyPair
 
@@ -240,7 +239,7 @@ func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
 	k, ok := key.handle.(rsa.PrivateKey)
 	if !ok {
 		return nil, NewError(InvalidAccessError, "key is not a valid "+RSASsaPkcs1v15+" private key")
-	}	
+	}
 
 	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
 	if !ok {
@@ -260,11 +259,11 @@ func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
 
 	hasher := hashFn()
 	hasher.Write(data)
-    
+
 	// 2.
 	s, err := rsa.SignPKCS1v15(rand.Reader, &k, cryptoHash, hasher.Sum(nil))
-	
-	// 3. 
+
+	// 3.
 	if err != nil {
 		return nil, NewError(OperationError, "unable to sign data:"+err.Error())
 	}
@@ -287,7 +286,7 @@ func (rsaSignerVerifier) Verify(key CryptoKey, signature, dataToVerify []byte) (
 		return false, NewError(InvalidAccessError, "key is not a valid RSASSA-PCKS1v1_5 public key")
 	}
 
-	// 2. 
+	// 2.
 	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
 	if !ok {
 		return false, NewError(NotSupportedError, "unsupported hash algorithm")
@@ -308,8 +307,7 @@ func (rsaSignerVerifier) Verify(key CryptoKey, signature, dataToVerify []byte) (
 
 	// 3.
 	if verifyErr != nil {
-		// TODO: not sure what the 'name' of this error should be, and whether the error 'message' should just be the error from the verify function or just 'invalid signature' or maybe just nil?
-		return false, NewError(InvalidSignatureError, "invalid signature")
+		return false, nil
 	}
 
 	return true, nil
@@ -325,7 +323,7 @@ func newRSAPssParams(rt *sobek.Runtime, normalized Algorithm, params sobek.Value
 	}
 
 	return &RSAPssParams{
-		Name: normalized.Name,
+		Name:       normalized.Name,
 		SaltLength: int(saltLength.ToInteger()),
 	}, nil
 }
@@ -339,7 +337,7 @@ func (rsaParams *RSAPssParams) Sign(key CryptoKey, data []byte) ([]byte, error) 
 	k, ok := key.handle.(rsa.PrivateKey)
 	if !ok {
 		return nil, NewError(InvalidAccessError, "key is not a valid "+RSAPss+" private key")
-	}	
+	}
 
 	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
 	if !ok {
@@ -363,11 +361,11 @@ func (rsaParams *RSAPssParams) Sign(key CryptoKey, data []byte) ([]byte, error) 
 	// 2.
 	opts := rsa.PSSOptions{
 		SaltLength: rsaParams.SaltLength,
-		Hash: cryptoHash,
+		Hash:       cryptoHash,
 	}
 	s, err := rsa.SignPSS(rand.Reader, &k, cryptoHash, hasher.Sum(nil), &opts)
 
-	// 3. 
+	// 3.
 	if err != nil {
 		return nil, NewError(OperationError, "unable to sign data:"+err.Error())
 	}
