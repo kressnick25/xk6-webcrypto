@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"strings"
+	"crypto/x509"
 
 	"github.com/grafana/sobek"
 )
@@ -414,4 +415,53 @@ func (rsaParams *RSAPssParams) Verify(key CryptoKey, signature, dataToVerify []b
 	}
 
 	return true, nil
+}
+
+func exportRsaKey(ck *CryptoKey, format KeyFormat) (interface{}, error) {
+    // 2.
+	if ck.handle == nil {
+		return nil, NewError(OperationError, "key data is not accessible")
+	}
+
+    // 3.
+	switch format {
+	case SpkiKeyFormat:
+		if ck.Type != PublicCryptoKeyType {
+			return nil, NewError(InvalidAccessError, "key is not a valid RSA public key")
+		}
+
+        /*
+        key, ok := ck.handle.(crypto.PublicKey)
+        if !ok {
+            return nil, NewError(InvalidAccessError, "key algorithm is not a valid RSA key")
+        }
+        */
+
+		bytes, err := x509.MarshalPKIXPublicKey(ck.handle)
+		if err != nil {
+			return nil, NewError(OperationError, "unable to marshal key to SPKI format: "+err.Error())
+		}
+
+		return bytes, nil
+	case Pkcs8KeyFormat:
+		if ck.Type != PrivateCryptoKeyType {
+			return nil, NewError(InvalidAccessError, "key is not a valid RSA private key")
+		}
+
+        key, ok := ck.handle.(rsa.PrivateKey)
+        if !ok {
+            return nil, NewError(InvalidAccessError, "key algorithm is not a valid RSA key")
+        }
+
+		bytes, err := x509.MarshalPKCS8PrivateKey(&key)
+		if err != nil {
+			return nil, NewError(OperationError, "unable to marshal key to PKCS8 format: "+err.Error())
+		}
+
+		return bytes, nil
+	case JwkKeyFormat:
+		return nil, NewError("NotImplemented", "JwkKeyFormat export not yet implemented for RSA")
+	default:
+		return nil, NewError(NotSupportedError, unsupportedKeyFormatErrorMsg+" "+format)
+	}
 }
