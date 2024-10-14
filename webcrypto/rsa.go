@@ -378,5 +378,40 @@ func (rsaParams *RSAPssParams) Sign(key CryptoKey, data []byte) ([]byte, error) 
 }
 
 func (rsaParams *RSAPssParams) Verify(key CryptoKey, signature, dataToVerify []byte) (bool, error) {
-	return false, NewError(OperationError, "Not implement")
+	// 1.
+	if key.Type != PublicCryptoKeyType {
+		return false, NewError(InvalidAccessError, "key is not a valid RSA-PSS public key")
+	}
+
+	k, ok := key.handle.(*rsa.PublicKey)
+	if !ok {
+		return false, NewError(InvalidAccessError, "key is not a valid RSA-PSS public key")
+	}
+
+	// 2.
+	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
+	if !ok {
+		return false, NewError(NotSupportedError, "unsupported hash algorithm")
+	}
+
+	hash := alg.Hash.Name
+
+	hashFn, ok := getHashFn(hash)
+	if !ok {
+		return false, NewError(NotSupportedError, "unsupported hash algorithm: "+hash)
+	}
+
+	hasher := hashFn()
+	hasher.Write(dataToVerify)
+
+	cryptoHash, _ := getCryptoHash(hash)
+    opts := rsa.PSSOptions{SaltLength: rsaParams.SaltLength, Hash: 0}
+    verifyErr := rsa.VerifyPSS(k, cryptoHash, hasher.Sum(nil), signature, &opts)
+
+	// 3.
+	if verifyErr != nil {
+		return false, nil
+	}
+
+	return true, nil
 }

@@ -21,6 +21,15 @@ export default async function () {
 
   console.log("signature: ", printArrayBuffer(signature));
 
+  // Verifies the signature of the encoded data with the provided key
+  const verified = await crypto.subtle.verify(
+    alg,
+    keyPair.publicKey,
+    signature,
+    data
+  );
+
+  console.log("verified: ", verified)
 }
 
 const string2ArrayBuffer = (str) => {
