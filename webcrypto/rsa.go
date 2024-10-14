@@ -317,7 +317,7 @@ func (rsaSignerVerifier) Verify(key CryptoKey, signature, dataToVerify []byte) (
 var _ SignerVerifier = &RSAPssParams{}
 
 func newRSAPssParams(rt *sobek.Runtime, normalized Algorithm, params sobek.Value) (*RSAPssParams, error) {
-	saltLength, err := traverseObject(rt, params, "saltValue")
+	saltLength, err := traverseObject(rt, params, "saltLength")
 	if err != nil {
 		return nil, NewError(SyntaxError, "could not get hash from algorithm parameter")
 	}
