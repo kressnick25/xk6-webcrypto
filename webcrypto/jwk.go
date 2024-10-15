@@ -4,6 +4,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +17,8 @@ const (
 
 	// JWKOctKeyType represents the symmetric key type.
 	JWKOctKeyType = "oct"
+
+    JWKRsaKeyType = "RSA"
 )
 
 // JsonWebKey represents a JSON Web Key (JsonWebKey) key.
@@ -289,4 +292,67 @@ func importECDHJWK(_ EllipticCurveKind, jsonKeyData []byte) (any, CryptoKeyType,
 	default:
 		return nil, UnknownCryptoKeyType, errors.New("input isn't a valid ECDH key")
 	}
+}
+
+
+func exportRsaJwk(ck *CryptoKey) (interface{}, error) {
+    exported := &JsonWebKey{}
+    exported.Set("kty", JWKRsaKeyType)
+
+    alg := ck.Algorithm.(RsaHashedKeyAlgorithm)
+    switch alg.Hash.Name {
+    case SHA1:
+        exported.Set("alg", "RS1")
+    case SHA256:
+        exported.Set("alg", "RS256")
+    case SHA384:
+        exported.Set("alg", "RS384")
+    case SHA512:
+        exported.Set("alg", "RS512")
+    default:
+        return nil, NewError(NotSupportedError, "unsupported RSA algorithm hash for JWK export")
+    }
+
+    // WebCrypto Standard defers to RFC 7518 for this section
+    // RFC 7518 section 6.3.1
+    switch ck.Type {
+    case PublicCryptoKeyType:
+        key := ck.handle.(rsa.PublicKey)
+        exported.Set("n", base64URLEncode(key.N.Bytes()))
+        e := big.NewInt(int64(key.E))
+        exported.Set("e", base64URLEncode(e.Bytes()))
+    case PrivateCryptoKeyType:
+        key := ck.handle.(rsa.PrivateKey)
+        exported.Set("n", base64URLEncode(key.N.Bytes()))
+        e := big.NewInt(int64(key.E))
+        exported.Set("e", base64URLEncode(e.Bytes()))
+
+        // RFC 7518 section 6.3.2
+        exported.Set("d", base64URLEncode(key.D.Bytes()))
+        exported.Set("p", base64URLEncode(key.Primes[0].Bytes()))
+        exported.Set("q", base64URLEncode(key.Primes[1].Bytes()))
+
+        key.Precompute()
+        exported.Set("dp", base64URLEncode(key.Precomputed.Dp.Bytes()))
+        exported.Set("dq", base64URLEncode(key.Precomputed.Dq.Bytes()))
+        exported.Set("qi", base64URLEncode(key.Precomputed.Qinv.Bytes()))
+
+
+        // RFC 7518 section 6.3.2.7
+        if len(key.Primes) > 2 {
+            encodedPrimes := make([]string, len(key.Primes))
+            for i, prime := range key.Primes[1:] {
+               encodedPrimes[i] = base64URLEncode(prime.Bytes())
+            }
+            exported.Set("oth", encodedPrimes)
+        }
+    default:
+        return nil, NewError(InvalidAccessError, "invalid key type for RSA JWK")
+
+    }
+
+    exported.Set("key_opts", ck.Usages)
+    exported.Set("ext", ck.Extractable)
+
+    return exported, nil
 }

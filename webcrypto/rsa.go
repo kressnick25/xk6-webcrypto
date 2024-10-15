@@ -460,7 +460,7 @@ func exportRsaKey(ck *CryptoKey, format KeyFormat) (interface{}, error) {
 
 		return bytes, nil
 	case JwkKeyFormat:
-		return nil, NewError("NotImplemented", "JwkKeyFormat export not yet implemented for RSA")
+		return exportRsaJwk(ck)
 	default:
 		return nil, NewError(NotSupportedError, unsupportedKeyFormatErrorMsg+" "+format)
 	}
