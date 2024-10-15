@@ -207,7 +207,7 @@ func (r *RsaHashedKeyGenParams) GenerateKey(
 		return nil, NewError(ImplementationError, "unsupported algorithm name")
 	}
 	privateKey.Usages = UsageIntersection(keyUsages, privateKeyUsages)
-	privateKey.handle = *keyPair
+	privateKey.handle = keyPair
 
 	// We apply the generateKey 8. step here, as we return a goja.Value
 	// instead of a CryptoKey(Pair).
@@ -234,12 +234,12 @@ type rsaSignerVerifier struct{}
 func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
 	// 1.
 	if key.Type != PrivateCryptoKeyType {
-		return nil, NewError(InvalidAccessError, "key is not a valid "+RSASsaPkcs1v15+" private key")
-	}
+		return nil, NewError(InvalidAccessError, "key is not a valid RSASSA-PCKS1v1_5 private key")
+    }
 
-	k, ok := key.handle.(rsa.PrivateKey)
+	k, ok := key.handle.(*rsa.PrivateKey)
 	if !ok {
-		return nil, NewError(InvalidAccessError, "key is not a valid "+RSASsaPkcs1v15+" private key")
+		return nil, NewError(InvalidAccessError, "key is not a valid RSASSA-PCKS1v1_5 private key")
 	}
 
 	alg, ok := key.Algorithm.(RsaHashedKeyAlgorithm)
@@ -262,7 +262,7 @@ func (rsaSignerVerifier) Sign(key CryptoKey, data []byte) ([]byte, error) {
 	hasher.Write(data)
 
 	// 2.
-	s, err := rsa.SignPKCS1v15(rand.Reader, &k, cryptoHash, hasher.Sum(nil))
+	s, err := rsa.SignPKCS1v15(rand.Reader, k, cryptoHash, hasher.Sum(nil))
 
 	// 3.
 	if err != nil {
@@ -335,7 +335,7 @@ func (rsaParams *RSAPssParams) Sign(key CryptoKey, data []byte) ([]byte, error) 
 		return nil, NewError(InvalidAccessError, "key is not a valid"+RSAPss+"private key")
 	}
 
-	k, ok := key.handle.(rsa.PrivateKey)
+	k, ok := key.handle.(*rsa.PrivateKey)
 	if !ok {
 		return nil, NewError(InvalidAccessError, "key is not a valid "+RSAPss+" private key")
 	}
@@ -364,7 +364,7 @@ func (rsaParams *RSAPssParams) Sign(key CryptoKey, data []byte) ([]byte, error) 
 		SaltLength: rsaParams.SaltLength,
 		Hash:       cryptoHash,
 	}
-	s, err := rsa.SignPSS(rand.Reader, &k, cryptoHash, hasher.Sum(nil), &opts)
+	s, err := rsa.SignPSS(rand.Reader, k, cryptoHash, hasher.Sum(nil), &opts)
 
 	// 3.
 	if err != nil {
@@ -448,12 +448,12 @@ func exportRsaKey(ck *CryptoKey, format KeyFormat) (interface{}, error) {
 			return nil, NewError(InvalidAccessError, "key is not a valid RSA private key")
 		}
 
-        key, ok := ck.handle.(rsa.PrivateKey)
+        key, ok := ck.handle.(*rsa.PrivateKey)
         if !ok {
             return nil, NewError(InvalidAccessError, "key algorithm is not a valid RSA key")
         }
 
-		bytes, err := x509.MarshalPKCS8PrivateKey(&key)
+		bytes, err := x509.MarshalPKCS8PrivateKey(key)
 		if err != nil {
 			return nil, NewError(OperationError, "unable to marshal key to PKCS8 format: "+err.Error())
 		}

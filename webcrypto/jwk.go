@@ -317,12 +317,18 @@ func exportRsaJwk(ck *CryptoKey) (interface{}, error) {
     // RFC 7518 section 6.3.1
     switch ck.Type {
     case PublicCryptoKeyType:
-        key := ck.handle.(rsa.PublicKey)
+        key, ok := ck.handle.(rsa.PublicKey)
+        if !ok {
+            return nil, NewError(InvalidAccessError, "key is not a RSA Public Key")    
+        }
         exported.Set("n", base64URLEncode(key.N.Bytes()))
         e := big.NewInt(int64(key.E))
         exported.Set("e", base64URLEncode(e.Bytes()))
     case PrivateCryptoKeyType:
-        key := ck.handle.(rsa.PrivateKey)
+        key, ok := ck.handle.(*rsa.PrivateKey)
+        if !ok {
+            return nil, NewError(InvalidAccessError, "key is not a RSA Private Key")    
+        }
         exported.Set("n", base64URLEncode(key.N.Bytes()))
         e := big.NewInt(int64(key.E))
         exported.Set("e", base64URLEncode(e.Bytes()))
